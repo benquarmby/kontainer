@@ -72,7 +72,7 @@
         beforeEach(function () {
             jasmine.clock().install();
             element = document.createElement('div');
-            element.setAttribute('data-bind', 'component: \'fake-component\'');
+            element.setAttribute('data-bind', 'component: { name: \'fake-component\', params: \'params\' }');
             document.body.appendChild(element);
         });
 
@@ -95,6 +95,30 @@
             ko.applyBindings(null, element);
             jasmine.clock().tick(1);
             expect(element.firstChild.innerHTML).toBe('injected value');
+        });
+
+        it('should inject componentInfo', function () {
+            var actualElement;
+
+            registerComponent(['componentInfo', function (componentInfo) {
+                actualElement = componentInfo.element;
+            }]);
+
+            ko.applyBindings(null, element);
+            jasmine.clock().tick(1);
+            expect(actualElement).toBe(element);
+        });
+
+        it('should inject params', function () {
+            var actualParams;
+
+            registerComponent(['params', function (params) {
+                actualParams = params;
+            }]);
+
+            ko.applyBindings(null, element);
+            jasmine.clock().tick(1);
+            expect(actualParams).toBe('params');
         });
 
         it('should only invoke factories once', function () {
