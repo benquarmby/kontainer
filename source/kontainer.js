@@ -3,112 +3,127 @@ var kontainer;
 kontainer = (function () {
     'use strict';
 
-    var resolve,
-        parse,
-        registry = {},
-        states = {
-            unparsed: 0,
-            parsing: -1,
-            parsed: 1
+    var states = {
+            injectable: 0,
+            injecting: -1,
+            resolved: 1
         },
-        slice = Array.prototype.slice;
+        container,
+        mockContainer;
 
-    resolve = function (name, path) {
-        if (!registry.hasOwnProperty(name)) {
-            throw new Error('Unknown dependency "' + name + '".');
-        }
-
-        path.push(name);
-
-        var dependency = registry[name];
-
-        if (dependency.state === states.parsing) {
-            throw new Error('Cyclic dependency detected while resolving "' + name + '". ' + path.join(' > '));
-        }
-
-        if (dependency.state === states.unparsed) {
-            dependency.state = states.parsing;
-            dependency.value = parse(dependency.factory, path);
-            delete dependency.factory;
-            dependency.state = states.parsed;
-        }
-
-        path.pop();
-
-        return dependency.value;
-    };
-
-    parse = function (definition, path, custom) {
-        var fn = definition.pop(),
-            args = [];
-
-        if (typeof fn !== 'function') {
-            throw new Error('The last element in a dependency array must be a function.');
-        }
-
-        custom = custom || {};
-
-        args = definition.map(function (key) {
-            if (typeof key !== 'string') {
-                throw new Error('Each element before a factory function must be a string.');
-            }
-
-            return custom.hasOwnProperty(key) ? custom[key] : resolve(key, path);
-        });
-
-        return fn.apply(undefined, args);
-    };
-
-    function registerFactory(name, factory) {
-        if (typeof name !== 'string') {
-            throw new Error('The name parameter must be a string.');
-        }
-
+    function validateFactory(factory) {
         if (!Array.isArray(factory)) {
             throw new Error('Factories must always be arrays.');
         }
 
-        registry[name] = {
-            state: states.unparsed,
-            factory: slice.call(factory)
-        };
-    }
+        var last = factory.length - 1;
 
-    function registerValue(name, value) {
-        if (typeof name !== 'string') {
-            throw new Error('The name parameter must be a string.');
-        }
+        factory.forEach(function (item, index) {
+            if (index === last) {
+                if (typeof item !== 'function') {
+                    throw new Error('The last element in a factory array must be a function.');
+                }
 
-        registry[name] = {
-            state: states.parsed,
-            value: value
-        };
-    }
-
-    function register(name, value) {
-        if (Array.isArray(value)) {
-            registerFactory(name, value);
-
-            return;
-        }
-
-        registerValue(name, value);
-    }
-
-    function createViewModel(name, params, componentInfo) {
-        return parse(
-            this,
-            [name],
-            {
-                params: params,
-                componentInfo: componentInfo
+                return;
             }
-        );
+
+            if (typeof item !== 'string') {
+                throw new Error('Each element in a factory array before the function must be a string.');
+            }
+        });
+    }
+
+    function Container() {
+        this.registry = {};
+    }
+
+    Container.prototype = {
+        constructor: Container,
+
+        resolve: function (name, path) {
+            if (!this.registry.hasOwnProperty(name)) {
+                throw new Error('Unknown dependency "' + name + '".');
+            }
+
+            path.push(name);
+
+            var dependency = this.registry[name];
+
+            if (dependency.state === states.injecting) {
+                throw new Error('Cyclic dependency detected while resolving "' + name + '". ' + path.join(' > '));
+            }
+
+            if (dependency.state === states.injectable) {
+                dependency.state = states.injecting;
+                dependency.value = this.inject(dependency.factory, path);
+                delete dependency.factory;
+                dependency.state = states.resolved;
+            }
+
+            path.pop();
+
+            return dependency.value;
+        },
+
+        inject: function (factory, path, custom) {
+            var fn = factory.pop(),
+                args;
+
+            args = factory.map(function (key) {
+                return custom && custom.hasOwnProperty(key) ? custom[key] : this.resolve(key, path);
+            });
+
+            return fn.apply(undefined, args);
+        },
+
+        registerFactory: function (name, factory) {
+            if (typeof name !== 'string') {
+                throw new Error('The name parameter must be a string.');
+            }
+
+            validateFactory(factory);
+
+            this.registry[name] = {
+                state: states.injectable,
+                factory: factory.slice()
+            };
+        },
+
+        registerValue: function (name, value) {
+            if (typeof name !== 'string') {
+                throw new Error('The name parameter must be a string.');
+            }
+
+            this.registry[name] = {
+                state: states.resolved,
+                value: value
+            };
+        },
+
+        register: function (name, value) {
+            if (Array.isArray(value)) {
+                this.registerFactory(name, value);
+
+                return;
+            }
+
+            this.registerValue(name, value);
+        }
+    };
+
+    container = new Container();
+
+    function createViewModel(factory, name, params, componentInfo) {
+        return container.inject(factory, [name], {
+            params: params,
+            componentInfo: componentInfo
+        });
     }
 
     function loadViewModel(componentName, viewModelConfig, callback) {
         if (Array.isArray(viewModelConfig)) {
-            callback(createViewModel.bind(viewModelConfig, componentName));
+            validateFactory(viewModelConfig);
+            callback(createViewModel.bind(null, viewModelConfig, componentName));
 
             return;
         }
@@ -116,12 +131,26 @@ kontainer = (function () {
         callback(null);
     }
 
+    mockContainer = new Container();
+
+    function mockInject(factory, custom) {
+        validateFactory(factory);
+
+        return mockContainer.inject(factory, [], custom);
+    }
+
     return {
-        registerFactory: registerFactory,
-        registerValue: registerValue,
-        register: register,
+        registerFactory: container.registerFactory.bind(container),
+        registerValue: container.registerValue.bind(container),
+        register: container.register.bind(container),
         loader: {
             loadViewModel: loadViewModel
+        },
+        mock: {
+            registerFactory: mockContainer.registerFactory.bind(mockContainer),
+            registerValue: mockContainer.registerValue.bind(mockContainer),
+            register: mockContainer.register.bind(mockContainer),
+            inject: mockInject
         }
     };
 }());

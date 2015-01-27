@@ -130,11 +130,11 @@
         });
 
         it('should throw given cyclic dependency', function () {
-            kontainer.registerFactory('service1', ['service2', function (name) {
-                return;
+            kontainer.registerFactory('service1', ['service2', function () {
+                return {};
             }]);
-            kontainer.registerFactory('service2', ['service1', function (name) {
-                return;
+            kontainer.registerFactory('service2', ['service1', function () {
+                return {};
             }]);
 
             registerComponent(['service1', function (service) {
