@@ -15,7 +15,9 @@
         });
 
         it('should accept array factory', function () {
-            kontainer.registerFactory('name', []);
+            expect(function () {
+                kontainer.registerFactory('name', []);
+            }).not.toThrow();
         });
     });
 
@@ -27,11 +29,15 @@
         });
 
         it('should accept object value', function () {
-            kontainer.registerValue('name', {});
+            expect(function () {
+                kontainer.registerValue('name', {});
+            }).not.toThrow();
         });
 
         it('should accept primitive value', function () {
-            kontainer.registerValue('name', 'value');
+            expect(function () {
+                kontainer.registerValue('name', 'value');
+            }).not.toThrow();
         });
     });
 
@@ -43,9 +49,11 @@
         });
 
         it('should accept any value', function () {
-            kontainer.register('name', /regexp/);
-            kontainer.register('name', []);
-            kontainer.register('name', 12345);
+            expect(function () {
+                kontainer.register('name', /regexp/);
+                kontainer.register('name', []);
+                kontainer.register('name', 12345);
+            }).not.toThrow();
         });
     });
 
@@ -148,6 +156,27 @@
             expect(function () {
                 jasmine.clock().tick(1);
             }).toThrowError(/fake-component > service1 > service2 > service1/i);
+        });
+    });
+
+    describe('mock', function () {
+        describe('inject', function () {
+            it('should throw injecting unknown dependency', function () {
+                expect(function () {
+                    kontainer.mock.inject(['unknown', function () {
+                        return {};
+                    }]);
+                }).toThrowError(/unknown/i);
+            });
+
+            it('should inject registered dependency', function () {
+                var factory = jasmine.createSpy('factory');
+
+                kontainer.mock.registerValue('known', 'value');
+                kontainer.mock.inject(['known', factory]);
+
+                expect(factory).toHaveBeenCalledWith('value');
+            });
         });
     });
 });

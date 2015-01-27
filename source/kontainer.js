@@ -66,11 +66,12 @@ kontainer = (function () {
         },
 
         inject: function (factory, path, custom) {
-            var fn = factory.pop(),
+            var self = this,
+                fn = factory.pop(),
                 args;
 
             args = factory.map(function (key) {
-                return custom && custom.hasOwnProperty(key) ? custom[key] : this.resolve(key, path);
+                return custom && custom.hasOwnProperty(key) ? custom[key] : self.resolve(key, path);
             });
 
             return fn.apply(undefined, args);
