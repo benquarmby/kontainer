@@ -193,13 +193,36 @@
                 }).toThrowError(/unknown/i);
             });
 
-            it('should inject registered dependency', function () {
+            it('should inject registered value', function () {
                 var factory = jasmine.createSpy('factory');
 
                 kontainer.mock.registerValue('known', 'value');
                 kontainer.mock.inject(['known', factory]);
 
                 expect(factory).toHaveBeenCalledWith('value');
+            });
+
+            it('should inject registered factory', function () {
+                var factory = jasmine.createSpy('factory'),
+                    product = {};
+
+                kontainer.mock.register('service', [function () {
+                    return product;
+                }]);
+                kontainer.mock.inject(['service', factory]);
+
+                expect(factory).toHaveBeenCalledWith(product);
+            });
+
+            it('should return product of factory', function () {
+                var product = {},
+                    actual;
+
+                actual = kontainer.mock.inject([function () {
+                    return product;
+                }]);
+
+                expect(actual).toBe(product);
             });
         });
     });

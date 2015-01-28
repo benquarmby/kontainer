@@ -141,16 +141,74 @@ kontainer = (function () {
     }
 
     return {
+        /**
+         * Registers a factory with the container.
+         * @method
+         * @param {String} name The name of the dependency.
+         * @param {Array} factory The factory array.
+         */
         registerFactory: container.registerFactory.bind(container),
+
+        /**
+         * Registers a value with the container.
+         * @method
+         * @param {String} name The name of the dependency.
+         * @param {Object} value The value.
+         */
         registerValue: container.registerValue.bind(container),
+
+        /**
+         * Registers a dependency with the container.
+         * Arrays are assumed to be factories, and all
+         * other types are assumed to be values.
+         * @method
+         * @param {String} name The name of the dependency.
+         * @param {Object} value The factory array or value.
+         */
         register: container.register.bind(container),
+
+        /**
+         * The component loader to be registered with Knockout.
+         *     ko.components.loaders.unshift(kontainer.loader)
+         */
         loader: {
             loadViewModel: loadViewModel
         },
+
         mock: {
+            /**
+             * Registers a factory with the mock container.
+             * @method
+             * @param {String} name The name of the dependency.
+             * @param {Array} factory The factory array.
+             */
             registerFactory: mockContainer.registerFactory.bind(mockContainer),
+
+            /**
+             * Registers a value with the mock container.
+             * @method
+             * @param {String} name The name of the dependency.
+             * @param {Object} value The value.
+             */
             registerValue: mockContainer.registerValue.bind(mockContainer),
+
+            /**
+             * Registers a dependency with the mock container.
+             * Arrays are assumed to be factories, and all
+             * other types are assumed to be values.
+             * @method
+             * @param {String} name The name of the dependency.
+             * @param {Object} value The factory array or value.
+             */
             register: mockContainer.register.bind(mockContainer),
+
+            /**
+             * Resolves a factory, injecting it with dependencies
+             * from the mock container.
+             * @method
+             * @param {Array} factory The factory array.
+             * @returns {Object} The product of the factory.
+             */
             inject: mockInject
         }
     };
