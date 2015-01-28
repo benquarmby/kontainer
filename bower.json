@@ -1,12 +1,12 @@
 {
   "name": "Kontainer",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "authors": [
     "Ben Quarmby <ben.quarmby@callmeqube.com>"
   ],
   "description": "Dependency Injection for Knockout",
-  "main": "kontainer.js",
-  "license": "Apache2",
+  "main": "source/kontainer.js",
+  "license": "Apache",
   "ignore": [
     "**/.*",
     "node_modules",

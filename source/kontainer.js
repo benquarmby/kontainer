@@ -1,3 +1,12 @@
+/*!
+ Kontainer 0.1.0
+ Copyright © Ben Quarmby 2015
+ https://github.com/benquarmby/kontainer/
+
+ This library may be used under the terms of the Apache License 2.0 (Apache).
+ Please see license.txt accompanying this file for more information.
+ !*/
+
 var kontainer;
 
 kontainer = (function () {
