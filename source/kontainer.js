@@ -1,4 +1,4 @@
-/*!
+﻿/*!
  Kontainer 0.1.0
  Copyright © Ben Quarmby 2015
  https://github.com/benquarmby/kontainer/
@@ -21,25 +21,26 @@ kontainer = (function () {
         mockContainer;
 
     function validateFactory(factory) {
-        if (!Array.isArray(factory)) {
+        if (!(factory instanceof Array)) {
             throw new Error('Factories must always be arrays.');
         }
 
-        var last = factory.length - 1;
+        var i,
+            len = factory.length,
+            last = len - 1,
+            item;
 
-        factory.forEach(function (item, index) {
-            if (index === last) {
+        for (i = 0; i < len; i += 1) {
+            item = factory[i];
+
+            if (i === last) {
                 if (typeof item !== 'function') {
                     throw new Error('The last element in a factory array must be a function.');
                 }
-
-                return;
-            }
-
-            if (typeof item !== 'string') {
+            } else if (typeof item !== 'string') {
                 throw new Error('Each element in a factory array before the function must be a string.');
             }
-        });
+        }
     }
 
     function Container() {
@@ -77,11 +78,18 @@ kontainer = (function () {
         inject: function (factory, path, custom) {
             var self = this,
                 fn = factory.pop(),
-                args;
+                args = [],
+                i,
+                len,
+                name,
+                value;
 
-            args = factory.map(function (key) {
-                return custom && custom.hasOwnProperty(key) ? custom[key] : self.resolve(key, path);
-            });
+            for (i = 0, len = factory.length; i < len; i += 1) {
+                name = factory[i];
+                value = custom && custom.hasOwnProperty(name) ? custom[name] : self.resolve(name, path);
+
+                args.push(value);
+            }
 
             return fn.apply(undefined, args);
         },
@@ -111,7 +119,7 @@ kontainer = (function () {
         },
 
         register: function (name, value) {
-            if (Array.isArray(value)) {
+            if (value instanceof Array) {
                 this.registerFactory(name, value);
 
                 return;
@@ -122,32 +130,7 @@ kontainer = (function () {
     };
 
     container = new Container();
-
-    function createViewModel(factory, name, params, componentInfo) {
-        return container.inject(factory, [name], {
-            params: params,
-            componentInfo: componentInfo
-        });
-    }
-
-    function loadViewModel(componentName, viewModelConfig, callback) {
-        if (Array.isArray(viewModelConfig)) {
-            validateFactory(viewModelConfig);
-            callback(createViewModel.bind(null, viewModelConfig, componentName));
-
-            return;
-        }
-
-        callback(null);
-    }
-
     mockContainer = new Container();
-
-    function mockInject(factory, custom) {
-        validateFactory(factory);
-
-        return mockContainer.inject(factory, [], custom);
-    }
 
     return {
         /**
@@ -156,7 +139,9 @@ kontainer = (function () {
          * @param {String} name The name of the dependency.
          * @param {Array} factory The factory array.
          */
-        registerFactory: container.registerFactory.bind(container),
+        registerFactory: function (name, factory) {
+            container.registerFactory(name, factory);
+        },
 
         /**
          * Registers a value with the container.
@@ -164,7 +149,9 @@ kontainer = (function () {
          * @param {String} name The name of the dependency.
          * @param {Object} value The value.
          */
-        registerValue: container.registerValue.bind(container),
+        registerValue: function (name, value) {
+            container.registerValue(name, value);
+        },
 
         /**
          * Registers a dependency with the container.
@@ -174,14 +161,31 @@ kontainer = (function () {
          * @param {String} name The name of the dependency.
          * @param {Object} value The factory array or value.
          */
-        register: container.register.bind(container),
+        register: function (name, value) {
+            container.register(name, value);
+        },
 
         /**
          * The component loader to be registered with Knockout.
          *     ko.components.loaders.unshift(kontainer.loader)
          */
         loader: {
-            loadViewModel: loadViewModel
+            loadViewModel: function (componentName, viewModelConfig, callback) {
+                if (!(viewModelConfig instanceof Array)) {
+                    callback(null);
+
+                    return;
+                }
+
+                validateFactory(viewModelConfig);
+
+                callback(function (params, componentInfo) {
+                    return container.inject(viewModelConfig, [componentName], {
+                        params: params,
+                        componentInfo: componentInfo
+                    });
+                });
+            }
         },
 
         mock: {
@@ -191,7 +195,9 @@ kontainer = (function () {
              * @param {String} name The name of the dependency.
              * @param {Array} factory The factory array.
              */
-            registerFactory: mockContainer.registerFactory.bind(mockContainer),
+            registerFactory: function (name, factory) {
+                mockContainer.registerFactory(name, factory);
+            },
 
             /**
              * Registers a value with the mock container.
@@ -199,7 +205,9 @@ kontainer = (function () {
              * @param {String} name The name of the dependency.
              * @param {Object} value The value.
              */
-            registerValue: mockContainer.registerValue.bind(mockContainer),
+            registerValue: function (name, value) {
+                mockContainer.registerValue(name, value);
+            },
 
             /**
              * Registers a dependency with the mock container.
@@ -209,16 +217,23 @@ kontainer = (function () {
              * @param {String} name The name of the dependency.
              * @param {Object} value The factory array or value.
              */
-            register: mockContainer.register.bind(mockContainer),
+            register: function (name, value) {
+                mockContainer.register(name, value);
+            },
 
             /**
              * Resolves a factory, injecting it with dependencies
-             * from the mock container.
+             * from the mock container or specified custom values.
              * @method
              * @param {Array} factory The factory array.
+             * @param {Object} custom A dictionary of custom values to inject.
              * @returns {Object} The product of the factory.
              */
-            inject: mockInject
+            inject: function (factory, custom) {
+                validateFactory(factory);
+
+                return mockContainer.inject(factory, [], custom);
+            }
         }
     };
 }());
