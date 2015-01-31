@@ -7,9 +7,16 @@
  Please see license.txt accompanying this file for more information.
  !*/
 
-var kontainer;
+(function (factory) {
+    'use strict';
 
-kontainer = (function () {
+    if (typeof define === 'function' && define.amd) {
+        define(['exports'], factory);
+    } else {
+        window.kontainer = {};
+        factory(window.kontainer);
+    }
+}(function (exports) {
     'use strict';
 
     var states = {
@@ -132,29 +139,84 @@ kontainer = (function () {
     container = new Container();
     mockContainer = new Container();
 
-    return {
+    /**
+     * Registers a factory with the container.
+     * @method
+     * @param {String} name The name of the dependency.
+     * @param {Array} factory The factory array.
+     */
+    exports.registerFactory = function (name, factory) {
+        container.registerFactory(name, factory);
+    };
+
+    /**
+     * Registers a value with the container.
+     * @method
+     * @param {String} name The name of the dependency.
+     * @param {Object} value The value.
+     */
+    exports.registerValue = function (name, value) {
+        container.registerValue(name, value);
+    };
+
+    /**
+     * Registers a dependency with the container.
+     * Arrays are assumed to be factories, and all
+     * other types are assumed to be values.
+     * @method
+     * @param {String} name The name of the dependency.
+     * @param {Object} value The factory array or value.
+     */
+    exports.register = function (name, value) {
+        container.register(name, value);
+    };
+
+    /**
+     * The component loader to be registered with Knockout.
+     *     ko.components.loaders.unshift(kontainer.loader)
+     */
+    exports.loader = {
+        loadViewModel: function (componentName, viewModelConfig, callback) {
+            if (!(viewModelConfig instanceof Array)) {
+                callback(null);
+
+                return;
+            }
+
+            validateFactory(viewModelConfig);
+
+            callback(function (params, componentInfo) {
+                return container.inject(viewModelConfig, [componentName], {
+                    params: params,
+                    componentInfo: componentInfo
+                });
+            });
+        }
+    };
+
+    exports.mock = {
         /**
-         * Registers a factory with the container.
+         * Registers a factory with the mock container.
          * @method
          * @param {String} name The name of the dependency.
          * @param {Array} factory The factory array.
          */
         registerFactory: function (name, factory) {
-            container.registerFactory(name, factory);
+            mockContainer.registerFactory(name, factory);
         },
 
         /**
-         * Registers a value with the container.
+         * Registers a value with the mock container.
          * @method
          * @param {String} name The name of the dependency.
          * @param {Object} value The value.
          */
         registerValue: function (name, value) {
-            container.registerValue(name, value);
+            mockContainer.registerValue(name, value);
         },
 
         /**
-         * Registers a dependency with the container.
+         * Registers a dependency with the mock container.
          * Arrays are assumed to be factories, and all
          * other types are assumed to be values.
          * @method
@@ -162,78 +224,21 @@ kontainer = (function () {
          * @param {Object} value The factory array or value.
          */
         register: function (name, value) {
-            container.register(name, value);
+            mockContainer.register(name, value);
         },
 
         /**
-         * The component loader to be registered with Knockout.
-         *     ko.components.loaders.unshift(kontainer.loader)
+         * Resolves a factory, injecting it with dependencies
+         * from the mock container or specified custom values.
+         * @method
+         * @param {Array} factory The factory array.
+         * @param {Object} custom A dictionary of custom values to inject.
+         * @returns {Object} The product of the factory.
          */
-        loader: {
-            loadViewModel: function (componentName, viewModelConfig, callback) {
-                if (!(viewModelConfig instanceof Array)) {
-                    callback(null);
+        inject: function (factory, custom) {
+            validateFactory(factory);
 
-                    return;
-                }
-
-                validateFactory(viewModelConfig);
-
-                callback(function (params, componentInfo) {
-                    return container.inject(viewModelConfig, [componentName], {
-                        params: params,
-                        componentInfo: componentInfo
-                    });
-                });
-            }
-        },
-
-        mock: {
-            /**
-             * Registers a factory with the mock container.
-             * @method
-             * @param {String} name The name of the dependency.
-             * @param {Array} factory The factory array.
-             */
-            registerFactory: function (name, factory) {
-                mockContainer.registerFactory(name, factory);
-            },
-
-            /**
-             * Registers a value with the mock container.
-             * @method
-             * @param {String} name The name of the dependency.
-             * @param {Object} value The value.
-             */
-            registerValue: function (name, value) {
-                mockContainer.registerValue(name, value);
-            },
-
-            /**
-             * Registers a dependency with the mock container.
-             * Arrays are assumed to be factories, and all
-             * other types are assumed to be values.
-             * @method
-             * @param {String} name The name of the dependency.
-             * @param {Object} value The factory array or value.
-             */
-            register: function (name, value) {
-                mockContainer.register(name, value);
-            },
-
-            /**
-             * Resolves a factory, injecting it with dependencies
-             * from the mock container or specified custom values.
-             * @method
-             * @param {Array} factory The factory array.
-             * @param {Object} custom A dictionary of custom values to inject.
-             * @returns {Object} The product of the factory.
-             */
-            inject: function (factory, custom) {
-                validateFactory(factory);
-
-                return mockContainer.inject(factory, [], custom);
-            }
+            return mockContainer.inject(factory, [], custom);
         }
     };
-}());
+}));
