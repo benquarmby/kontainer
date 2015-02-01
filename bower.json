@@ -15,6 +15,7 @@
     "tests"
   ],
   "devDependencies": {
-    "knockout": "~3.2.0"
+    "knockout": "~3.2.0",
+    "requirejs": "~2.1.15"
   }
 }
