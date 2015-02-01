@@ -62,9 +62,13 @@
                 throw new Error('Unknown dependency "' + name + '".');
             }
 
-            path.push(name);
-
             var dependency = this.registry[name];
+
+            if (dependency.state === states.resolved) {
+                return dependency.value;
+            }
+
+            path.push(name);
 
             if (dependency.state === states.injecting) {
                 throw new Error('Cyclic dependency detected while resolving "' + name + '". ' + path.join(' > '));
@@ -141,7 +145,6 @@
 
     /**
      * Registers a factory with the container.
-     * @method
      * @param {String} name The name of the dependency.
      * @param {Array} factory The factory array.
      */
@@ -151,7 +154,6 @@
 
     /**
      * Registers a value with the container.
-     * @method
      * @param {String} name The name of the dependency.
      * @param {Object} value The value.
      */
@@ -161,9 +163,8 @@
 
     /**
      * Registers a dependency with the container.
-     * Arrays are assumed to be factories, and all
-     * other types are assumed to be values.
-     * @method
+     * Arrays are assumed to be factories. All other
+     * types are assumed to be values.
      * @param {String} name The name of the dependency.
      * @param {Object} value The factory array or value.
      */
@@ -173,7 +174,7 @@
 
     /**
      * The component loader to be registered with Knockout.
-     *     ko.components.loaders.unshift(kontainer.loader)
+     *     ko.components.loaders.unshift(kontainer.loader);
      */
     exports.loader = {
         loadViewModel: function (componentName, viewModelConfig, callback) {
@@ -194,10 +195,13 @@
         }
     };
 
+    /**
+     * The mock namespace is used for isolating services
+     * and view models for unit testing.
+     */
     exports.mock = {
         /**
          * Registers a factory with the mock container.
-         * @method
          * @param {String} name The name of the dependency.
          * @param {Array} factory The factory array.
          */
@@ -207,7 +211,6 @@
 
         /**
          * Registers a value with the mock container.
-         * @method
          * @param {String} name The name of the dependency.
          * @param {Object} value The value.
          */
@@ -217,9 +220,8 @@
 
         /**
          * Registers a dependency with the mock container.
-         * Arrays are assumed to be factories, and all
-         * other types are assumed to be values.
-         * @method
+         * Arrays are assumed to be factories. All other
+         * types are assumed to be values.
          * @param {String} name The name of the dependency.
          * @param {Object} value The factory array or value.
          */
@@ -230,7 +232,6 @@
         /**
          * Resolves a factory, injecting it with dependencies
          * from the mock container or specified custom values.
-         * @method
          * @param {Array} factory The factory array.
          * @param {Object} custom A dictionary of custom values to inject.
          * @returns {Object} The product of the factory.
